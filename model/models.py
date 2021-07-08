@@ -114,6 +114,7 @@ class VAE(nn.Module):
         conv2_channels = 64
         conv3_channels = 64
         conv4_channels = 64
+        conv5_channels = 10
         padding = 1
 
         # Encoder
@@ -137,6 +138,11 @@ class VAE(nn.Module):
             nn.BatchNorm2d(conv4_channels),
             nn.LeakyReLU(0.2, inplace=True))
 
+        self.conv5 = nn.Sequential(
+            nn.Conv2d( in_channels=conv4_channels, out_channels=conv5_channels, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(conv5_channels),
+            nn.LeakyReLU(0.2, inplace=True))
+
         conv_out = self.conv_layers(torch.rand(size=input_size))
         self.conv_shape = conv_out.shape
         self.flat_size = conv_out.flatten().shape[0]
@@ -153,21 +159,26 @@ class VAE(nn.Module):
         self.linear = nn.Linear(latent_size, self.flat_size)
 
         self.deconv1 = nn.Sequential(
+            nn.ConvTranspose2d( in_channels=conv5_channels, out_channels=conv4_channels, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(conv4_channels),
+            nn.ReLU(inplace=True))
+
+        self.deconv2 = nn.Sequential(
             nn.ConvTranspose2d( in_channels=conv4_channels, out_channels=conv3_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
             nn.BatchNorm2d(conv3_channels),
             nn.ReLU(inplace=True))
 
-        self.deconv2 = nn.Sequential(
+        self.deconv3 = nn.Sequential(
             nn.ConvTranspose2d( in_channels=conv3_channels, out_channels=conv2_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
             nn.BatchNorm2d(conv2_channels),
             nn.ReLU(inplace=True))
 
-        self.deconv3 = nn.Sequential(
+        self.deconv4 = nn.Sequential(
             nn.ConvTranspose2d( in_channels=conv2_channels, out_channels=conv1_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
             nn.BatchNorm2d(conv1_channels),
             nn.ReLU(inplace=True))
 
-        self.deconv4 = nn.Sequential(
+        self.deconv5 = nn.Sequential(
             nn.ConvTranspose2d( in_channels=conv1_channels, out_channels=3, kernel_size=kernel_size, stride=stride, padding=padding, bias=False))
 
     def conv_layers(self, x):
@@ -175,6 +186,7 @@ class VAE(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
+        x = self.conv5(x)
         return x
     
     def deconv_layer(self, x):
@@ -182,6 +194,7 @@ class VAE(nn.Module):
         x = self.deconv2(x)
         x = self.deconv3(x)
         x = self.deconv4(x)
+        x = self.deconv5(x)
         return x
 
     def encode(self, x):
