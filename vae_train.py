@@ -11,10 +11,10 @@ import torch.nn.functional as F
 
 import sys
 
-device = 'cpu'
+device = 'cuda:0'
 
 dataset = SpeedDataset(root="data", transform=ToTensor(), train = True)
-train_dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+train_dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
 vae_model = VAE(latent_size = 1000, input_size = dataset[0][0].unsqueeze(0).shape).to(device)
 optimizer = optim.Adam(vae_model.parameters(), lr = 1e-4)
@@ -26,6 +26,9 @@ def main_loop():
     while True:
         for batch_no, (images, labels) in enumerate(train_dataloader):
 
+            images = images.to(device)
+            labels = labels.to(device)
+
             optimizer.zero_grad()
 
             recon, mu, logvar = vae_model(images)
@@ -36,8 +39,8 @@ def main_loop():
 
             print(f"[EPOCH {epoch}][BATCH {batch_no}][LOSS {loss.item()}]")
 
-            logger.log_image("Reconstruction", recon[0], episode = epoch)
-            logger.log_image("Original", images[0], episode = epoch)
+            logger.log_image("Reconstruction", recon[0].detach().cpu(), episode = epoch)
+            logger.log_image("Original", images[0].detach().cpu(), episode = epoch)
 
         epoch += 1
 
