@@ -113,7 +113,7 @@ class VAE(nn.Module):
         conv1_channels = 32
         conv2_channels = 64
         conv3_channels = 64
-        conv4_channels = 256
+        conv4_channels = 64
         padding = 1
 
         # Encoder
@@ -174,11 +174,11 @@ class VAE(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        #x = self.conv4(x)
+        x = self.conv4(x)
         return x
     
     def deconv_layer(self, x):
-        #x = self.deconv1(x)
+        x = self.deconv1(x)
         x = self.deconv2(x)
         x = self.deconv3(x)
         x = self.deconv4(x)
@@ -208,7 +208,8 @@ class VAE(nn.Module):
             self.train()
             mu, logvar = self.encode(x)
             z = self.reparameterize(mu, logvar)
-            return self.decode(z), mu, logvar
+            recon = self.decode(z)
+            return recon, mu, logvar
         elif mode == 'inference':
             self.eval()
             mu, logvar = self.encode(x)
