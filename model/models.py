@@ -45,64 +45,36 @@ class Snail(nn.Module):
         x = self.attn3(x)
         return x
 
-class Model(nn.Module):
-    def __init__(self, snail_kwargs, action_size):
+class SpeedModel(nn.Module):
+    def __init__(self, snail_kwargs, vae_kwargs):
         super().__init__()
 
+        self.vae = VAE(**vae_kwargs)
         self.snail = Snail(**snail_kwargs)
 
-        add_filters = 256
-        self.behav_repr = AttentionBlock(input_size=self.snail.out_filters, key_size=512, value_size=add_filters)
-        self.task_repr = AttentionBlock(input_size=self.snail.out_filters, key_size=512, value_size=add_filters)
-        in_filters = self.snail.out_filters + add_filters
-
+        in_filters = self.snail.out_filters
         hidden_size = 256
 
-        self.value_net = nn.Sequential(
-                nn.Linear(in_filters*2, hidden_size), 
+        self.fc = nn.Sequential(
+                nn.Linear(in_filters, hidden_size), 
                 nn.ReLU(),
-                nn.Linear(hidden_size, action_size), 
-                )
-        self.policy_net = nn.Sequential(
-                nn.Linear(in_filters*2, hidden_size),
-                nn.ReLU(),
-                nn.Linear(hidden_size, action_size), 
-                nn.Softmax()
+                nn.Linear(hidden_size, 1), 
                 )
 
-        self.token_types = ['demo_end']
+    def forward(self, image_batch):
 
-    def create_special_token(self, type):
-        assert type in self.token_types
+        recon, mu, logvar = self.vae(image_batch)
+        vae_output = \
+                {
+                'reconstruction': recon,
+                'mu': mu,
+                'logvar': logvar
+                }
 
-        if type == 'demo_end':
-            z = torch.zeros(self.snail.input_size,dtype=torch.float32)
-            z[-1] = 1.0
-            return z
-
-    def forward(self, demo, obs):
-        demo_seq_len = demo.shape[0]
-        obs_seq_len = obs.shape[0]
-
-        demo_end_token = self.create_special_token('demo_end')
-        demo = torch.cat((demo, demo_end_token.unsqueeze(0)), dim = 0)
-        demo_obs = torch.cat((demo,obs), dim=0)
-
-        snail_output = self.snail(demo_obs)
-
-        behav_repr = self.behav_repr(snail_output[:demo_seq_len+1]) # +1 because of the added demo_end_token
-        behav_repr = behav_repr[-1,:] # get the output of demo_end_token
-
-        task_repr = self.task_repr(snail_output)
-        task_repr = task_repr[-obs_seq_len:,:]
-
-        behav_repr_tile = behav_repr.unsqueeze(0).tile((obs_seq_len, 1))
-        context_vectors = torch.cat((task_repr,behav_repr_tile), dim = 1)
-
-        actions = self.policy_net(context_vectors)
-        values = self.value_net(context_vectors)
+        snail_output = self.snail(vae_output)
+        vel_pred = self.fc(snail_output)
         
-        return actions, values
+        return vel_pred, vae_output
 
 class VAE(nn.Module):
     def __init__(self, latent_size, input_size):
@@ -227,3 +199,4 @@ class VAE(nn.Module):
             self.eval()
             mu, logvar = self.encode(x)
             return mu
+
