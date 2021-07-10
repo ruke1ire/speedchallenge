@@ -1,5 +1,6 @@
 from dojo import Dojo
 import torch.nn.functional as F
+import torch
 
 class SpeedDojo(Dojo):
     def obj_func(self, recon_image, original_image, mu, logvar, pred_vel, actual_vel, vae_gain, sup_gain):
@@ -23,8 +24,8 @@ class SpeedDojo(Dojo):
 
         """
         # VAE LOSS
-        BCE = F.binary_cross_entropy(recon_image, original_image, reduction='sum')
-        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        BCE = F.binary_cross_entropy(recon_image, original_image, reduction='mean')
+        KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         vae_loss = BCE + KLD
 
         # SUPERVISED LOSS
@@ -43,18 +44,19 @@ class SpeedDojo(Dojo):
             for i, (image_batch, label_batch) in enumerate(dataloader):
 
                 image_batch = image_batch.to(device)
-                label_batch = label_batch.to(device)
+                label_batch = label_batch.float().to(device)
 
                 optimizer.zero_grad()
 
                 vel_pred, vae_out = model(image_batch)
 
-                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch, 1e-5, 1)
+                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch.unsqueeze(1), 10, 1)
+                print("VAE", vae_loss, "SUP", sup_loss)
 
                 total_loss.backward()
                 optimizer.step()
 
-                print(total_loss.item())
+                print(f"[LOSS {total_loss.item()}]")
             epoch += 1
 
 if __name__ == "__main__":

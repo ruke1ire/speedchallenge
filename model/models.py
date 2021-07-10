@@ -71,7 +71,7 @@ class SpeedModel(nn.Module):
                 'logvar': logvar
                 }
 
-        snail_output = self.snail(vae_output)
+        snail_output = self.snail(mu)
         vel_pred = self.fc(snail_output)
         
         return vel_pred, vae_output
