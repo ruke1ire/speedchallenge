@@ -38,12 +38,15 @@ class SpeedDojo(Dojo):
     def test(self, model, dataloader, logger, device):
         pass
 
-    def train(self, model, dataloader, optimizer, device, criteria, logger):
+    def train(self, model, train_dataloader, optimizer, device, criteria, logger, test_dataloader):
         model = model.to(device)
         step = 1
         epoch = 1
+        vae_gain = 100.0
+        sup_gain  = 1.0
+
         while True:
-            for i, (image_batch, label_batch) in enumerate(dataloader):
+            for i, (image_batch, label_batch) in enumerate(train_dataloader):
 
                 image_batch = image_batch.to(device)
                 label_batch = label_batch.float().to(device)
@@ -52,19 +55,35 @@ class SpeedDojo(Dojo):
 
                 vel_pred, vae_out = model(image_batch)
 
-                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch.unsqueeze(1), 100.0, 1.0)
+                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch.unsqueeze(1), vae_gain, sup_gain)
 
                 total_loss.backward()
                 optimizer.step()
 
-                logger.log_scalar(step, total_loss.item(), "Total loss")
-                logger.log_scalar(step, vae_loss.item(), "VAE loss")
-                logger.log_scalar(step, sup_loss.item(), "SUP loss")
+                logger.log_scalar(step, total_loss.item(), "Total train loss")
+                logger.log_scalar(step, vae_loss.item(), "VAE train loss")
+                logger.log_scalar(step, sup_loss.item(), "SUP train loss")
 
-                print(f"[EPOCH {epoch}][BATCH {i}][LOSS {total_loss.item()}]")
+                if i % 300 == 0:
+                    model.eval()
+
+                    image_batch_test, label_batch_test = next(iter(test_dataloader))
+                    image_batch_test = image_batch_test.to(device)
+                    label_batch_test = label_batch_test.float().to(device)
+
+                    with torch.no_grad():
+                        vel_pred_test, vae_out_test = model(image_batch_test)
+                        total_loss_test, vae_loss_test, sup_loss_test = self.obj_func(vae_out_test['reconstruction'], image_batch_test, vae_out_test['mu'], vae_out_test['logvar'], vel_pred_test, label_batch_test.unsqueeze(1), 100.0, 1.0)
+
+                    logger.log_scalar(step, total_loss_test.item(), "Total test loss")
+                    logger.log_scalar(step, vae_loss_test.item(), "VAE test loss")
+                    logger.log_scalar(step, sup_loss_test.item(), "SUP test loss")
+                    logger.log_image("Reconstruction", vae_out_test['reconstruction'][0].detach().cpu(), episode = epoch)
+                    logger.log_image("Original", image_batch_test[0].detach().cpu(), episode = epoch)
+
+                    model.train()
+                print(f"[EPOCH {epoch}][BATCH {i}][TRAIN LOSS {total_loss.item():.4f}][TEST LOSS {total_loss_test.item():.4f}]")
                 step += 1
-            logger.log_image("Reconstruction", vae_out['reconstruction'][0].detach().cpu(), episode = epoch)
-            logger.log_image("Original", image_batch[0].detach().cpu(), episode = epoch)
             epoch += 1
 
 if __name__ == "__main__":
