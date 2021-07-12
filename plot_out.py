@@ -65,8 +65,6 @@ with torch.no_grad():
 
         vel_pred, vae_out = speedmodel(image_batch)
         vel_preds.append(vel_pred.cpu())
-        if i == 100:
-            break
 
 vel_preds = torch.cat(vel_preds).squeeze(0)
 vel_actual = torch.cat(vel_actual).squeeze(0)

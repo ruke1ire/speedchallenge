@@ -8,4 +8,4 @@ The objective of this project is to predict vehicle velocity with a dashcam usin
 - [x] Train model
 - [x] Plot output from model
 - [ ] Work on model so that it actually works
-- [ ] Training should not use first frame
+- [x] Training should not use first frame

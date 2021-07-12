@@ -42,7 +42,7 @@ class SpeedDojo(Dojo):
         model = model.to(device)
         step = 1
         epoch = 1
-        vae_gain = 100.0
+        vae_gain = 10.0
         sup_gain  = 1.0
 
         while True:
@@ -55,7 +55,7 @@ class SpeedDojo(Dojo):
 
                 vel_pred, vae_out = model(image_batch)
 
-                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch.unsqueeze(1), vae_gain, sup_gain)
+                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred[1:], label_batch.unsqueeze(1)[1:], vae_gain, sup_gain)
 
                 total_loss.backward()
                 optimizer.step()
@@ -73,7 +73,7 @@ class SpeedDojo(Dojo):
 
                     with torch.no_grad():
                         vel_pred_test, vae_out_test = model(image_batch_test)
-                        total_loss_test, vae_loss_test, sup_loss_test = self.obj_func(vae_out_test['reconstruction'], image_batch_test, vae_out_test['mu'], vae_out_test['logvar'], vel_pred_test, label_batch_test.unsqueeze(1), 100.0, 1.0)
+                        total_loss_test, vae_loss_test, sup_loss_test = self.obj_func(vae_out_test['reconstruction'], image_batch_test, vae_out_test['mu'], vae_out_test['logvar'], vel_pred_test[1:], label_batch_test.unsqueeze(1)[1:], 100.0, 1.0)
 
                     logger.log_scalar(step, total_loss_test.item(), "Total test loss")
                     logger.log_scalar(step, vae_loss_test.item(), "VAE test loss")
