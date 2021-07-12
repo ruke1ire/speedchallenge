@@ -6,4 +6,5 @@ The objective of this project is to predict vehicle velocity with a dashcam usin
 
 - [ ] Dojo's obj_func should be a torch.nn.Module instead
 - [x] Train model
-- [ ] Plot output from model
+- [x] Plot output from model
+- [ ] Work on model so that it actually works

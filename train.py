@@ -6,12 +6,15 @@ from logger import Logger
 import torch.optim as optim
 from torchvision.transforms.transforms import ToTensor
 from torch.utils.data.dataloader import DataLoader
-from torch.utils.data import SequentialSampler
+from torch.utils.data import SequentialSampler, Subset
 import sys
+import numpy as np
 
 try:
-    train_dataset = SpeedDataset('data', transform=ToTensor(), train=True)
-    test_dataset = SpeedDataset('data', transform=ToTensor(), train=True)
+    speeddataset = SpeedDataset('data', transform=ToTensor())
+    val_size = int(0.2*len(speeddataset))
+    train_dataset = Subset(speeddataset, list(range(0, len(speeddataset)-val_size)))
+    test_dataset = Subset(speeddataset, list(range(len(speeddataset)-val_size, len(speeddataset))))
     
     batch_sampler = RandomBatchSampler(SequentialSampler(train_dataset), batch_size = 10, drop_last = False)
     train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler, num_workers = 8)

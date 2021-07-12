@@ -67,7 +67,7 @@ class SpeedDojo(Dojo):
                 if i % 300 == 0:
                     model.eval()
 
-                    image_batch_test, label_batch_test = next(iter(test_dataloader))
+                    image_batch_test, label_batch_test = iter(test_dataloader).next()
                     image_batch_test = image_batch_test.to(device)
                     label_batch_test = label_batch_test.float().to(device)
 
@@ -78,8 +78,8 @@ class SpeedDojo(Dojo):
                     logger.log_scalar(step, total_loss_test.item(), "Total test loss")
                     logger.log_scalar(step, vae_loss_test.item(), "VAE test loss")
                     logger.log_scalar(step, sup_loss_test.item(), "SUP test loss")
-                    logger.log_image("Reconstruction", vae_out_test['reconstruction'][0].detach().cpu(), episode = epoch)
-                    logger.log_image("Original", image_batch_test[0].detach().cpu(), episode = epoch)
+                    logger.log_image("Reconstruction", vae_out_test['reconstruction'][0].detach().cpu(), episode = step)
+                    logger.log_image("Original", image_batch_test[0].detach().cpu(), episode = step)
 
                     model.train()
                 print(f"[EPOCH {epoch}][BATCH {i}][TRAIN LOSS {total_loss.item():.4f}][TEST LOSS {total_loss_test.item():.4f}]")
