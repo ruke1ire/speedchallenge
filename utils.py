@@ -39,6 +39,8 @@ class SpeedDojo(Dojo):
         pass
 
     def train(self, model, dataloader, optimizer, device, criteria, logger):
+        model = model.to(device)
+        step = 1
         epoch = 1
         while True:
             for i, (image_batch, label_batch) in enumerate(dataloader):
@@ -50,13 +52,19 @@ class SpeedDojo(Dojo):
 
                 vel_pred, vae_out = model(image_batch)
 
-                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch.unsqueeze(1), 10, 1)
-                print("VAE", vae_loss, "SUP", sup_loss)
+                total_loss, vae_loss, sup_loss = self.obj_func(vae_out['reconstruction'], image_batch, vae_out['mu'], vae_out['logvar'], vel_pred, label_batch.unsqueeze(1), 100.0, 1.0)
 
                 total_loss.backward()
                 optimizer.step()
 
-                print(f"[LOSS {total_loss.item()}]")
+                logger.log_scalar(step, total_loss.item(), "Total loss")
+                logger.log_scalar(step, vae_loss.item(), "VAE loss")
+                logger.log_scalar(step, sup_loss.item(), "SUP loss")
+
+                print(f"[EPOCH {epoch}][BATCH {i}][LOSS {total_loss.item()}]")
+                step += 1
+            logger.log_image("Reconstruction", vae_out['reconstruction'][0].detach().cpu(), episode = epoch)
+            logger.log_image("Original", image_batch[0].detach().cpu(), episode = epoch)
             epoch += 1
 
 if __name__ == "__main__":

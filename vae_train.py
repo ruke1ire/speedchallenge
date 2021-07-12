@@ -14,7 +14,7 @@ import sys
 device = 'cuda:0'
 
 dataset = SpeedDataset(root="data", transform=ToTensor(), train = True)
-train_dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+train_dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
 
 vae_model = VAE(latent_size = 1000, input_size = dataset[0][0].unsqueeze(0).shape).to(device)
 optimizer = optim.Adam(vae_model.parameters(), lr = 1e-4)
@@ -22,9 +22,11 @@ optimizer = optim.Adam(vae_model.parameters(), lr = 1e-4)
 logger = Logger("VAE")
 
 def main_loop():
+    steps = 1
     epoch = 1
     while True:
         for batch_no, (images, labels) in enumerate(train_dataloader):
+            steps += 1
 
             images = images.to(device)
             labels = labels.to(device)
@@ -39,8 +41,8 @@ def main_loop():
 
             print(f"[EPOCH {epoch}][BATCH {batch_no}][LOSS {loss.item()}]")
 
-            logger.log_image("Reconstruction", recon[0].detach().cpu(), episode = epoch)
-            logger.log_image("Original", images[0].detach().cpu(), episode = epoch)
+            logger.log_image("Reconstruction", recon[0].cpu().detach(), episode = steps)
+            logger.log_image("Original", images[0].cpu().detach(), episode = steps)
 
         epoch += 1
 
