@@ -64,7 +64,7 @@ class SpeedDojo(Dojo):
                 logger.log_scalar(step, vae_loss.item(), "VAE train loss")
                 logger.log_scalar(step, sup_loss.item(), "SUP train loss")
 
-                if i % 300 == 0:
+                if i % 30 == 0:
                     model.eval()
 
                     image_batch_test, label_batch_test = iter(test_dataloader).next()
@@ -73,7 +73,7 @@ class SpeedDojo(Dojo):
 
                     with torch.no_grad():
                         vel_pred_test, vae_out_test = model(image_batch_test)
-                        total_loss_test, vae_loss_test, sup_loss_test = self.obj_func(vae_out_test['reconstruction'], image_batch_test, vae_out_test['mu'], vae_out_test['logvar'], vel_pred_test[1:], label_batch_test.unsqueeze(1)[1:], 100.0, 1.0)
+                        total_loss_test, vae_loss_test, sup_loss_test = self.obj_func(vae_out_test['reconstruction'], image_batch_test, vae_out_test['mu'], vae_out_test['logvar'], vel_pred_test[1:], label_batch_test.unsqueeze(1)[1:], vae_gain, sup_gain)
 
                     logger.log_scalar(step, total_loss_test.item(), "Total test loss")
                     logger.log_scalar(step, vae_loss_test.item(), "VAE test loss")

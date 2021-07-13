@@ -13,22 +13,22 @@ import numpy as np
 try:
     speeddataset = SpeedDataset('data', transform=ToTensor())
     val_size = int(0.2*len(speeddataset))
-    train_dataset = Subset(speeddataset, list(range(0, len(speeddataset)-val_size)))
-    test_dataset = Subset(speeddataset, list(range(len(speeddataset)-val_size, len(speeddataset))))
+    test_dataset = Subset(speeddataset, list(range(0, val_size)))
+    train_dataset = Subset(speeddataset, list(range(val_size, len(speeddataset))))
     
-    batch_sampler = RandomBatchSampler(SequentialSampler(train_dataset), batch_size = 10, drop_last = False)
+    batch_sampler = RandomBatchSampler(SequentialSampler(train_dataset), batch_size = 30, drop_last = False)
     train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler, num_workers = 8)
 
     batch_sampler_test = RandomBatchSampler(SequentialSampler(test_dataset), batch_size = 10, drop_last = False)
     test_dataloader = DataLoader(test_dataset, batch_sampler=batch_sampler_test, num_workers = 8)
 
-    latent_size = 1000
+    latent_size = 100
     vae_kwargs = {"latent_size": latent_size, "input_size": train_dataset[0][0].unsqueeze(0).shape}
     snail_kwargs = {"input_size": latent_size, "seq_length": 10}
     speedmodel = SpeedModel(snail_kwargs=snail_kwargs, vae_kwargs=vae_kwargs)
 
     device = 'cuda:1'
-    optimizer = optim.Adam(speedmodel.parameters(), lr = 1e-4)
+    optimizer = optim.Adam(speedmodel.parameters(), lr = 1e-5)
 
     dojo = SpeedDojo()
     logger = Logger('SppedModel')

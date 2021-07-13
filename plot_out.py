@@ -11,17 +11,17 @@ from tqdm import tqdm
 
 speeddataset = SpeedDataset('data', transform=ToTensor())
 val_size = int(0.2*len(speeddataset))
-train_dataset = Subset(speeddataset, list(range(0, len(speeddataset)-val_size)))
-test_dataset = Subset(speeddataset, list(range(len(speeddataset)-val_size, len(speeddataset))))
+test_dataset = Subset(speeddataset, list(range(0, val_size)))
+train_dataset = Subset(speeddataset, list(range(val_size, len(speeddataset))))
 
-batch_sampler = BatchSampler(SequentialSampler(train_dataset), batch_size = 10, drop_last = False)
+batch_sampler = BatchSampler(SequentialSampler(train_dataset), batch_size = 100, drop_last = False)
 train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler, num_workers = 4)
 
-batch_sampler_test = BatchSampler(SequentialSampler(test_dataset), batch_size = 10, drop_last = False)
+batch_sampler_test = BatchSampler(SequentialSampler(test_dataset), batch_size = 100, drop_last = False)
 test_dataloader = DataLoader(test_dataset, batch_sampler=batch_sampler_test, num_workers = 4)
 
 device = 'cuda:1'
-latent_size = 1000
+latent_size = 100
 vae_kwargs = {"latent_size": latent_size, "input_size": train_dataset[0][0].unsqueeze(0).shape}
 snail_kwargs = {"input_size": latent_size, "seq_length": 10}
 speedmodel = SpeedModel(snail_kwargs=snail_kwargs, vae_kwargs=vae_kwargs)
@@ -41,7 +41,7 @@ with torch.no_grad():
 
         vel_pred, vae_out = speedmodel(image_batch)
         vel_preds.append(vel_pred.cpu())
-        if i == 100:
+        if i == 40:
             break
 
 vel_preds = torch.cat(vel_preds).squeeze(0)
