@@ -63,6 +63,8 @@ def opticalFlowDense(image_current, image_next):
 
 def create_frames(args) :
     cap = cv2.VideoCapture(args.video)
+
+    out = cv2.VideoWriter("data/train_extracted.mp4",cv2.VideoWriter_fourcc(*'DIVX'),20.0,(640, 480))
     i = 1 
     len_frames = 2
     
@@ -85,13 +87,16 @@ def create_frames(args) :
                 cv2.imshow("original (previous)", frames[0])
                 cv2.imshow("optical flow", flow_frame)
                 key = cv2.waitKey(10)
+
             else:
                 pass
 
+            out.write(flow_frame)
             i += 1
             frames.pop(0)
             print(f"Extracting Frame {i}", end="\r")
 
+    out.release()
     cap.release()
     cv2.destroyAllWindows()
 
