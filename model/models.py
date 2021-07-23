@@ -200,3 +200,77 @@ class VAE(nn.Module):
             mu, logvar = self.encode(x)
             return mu
 
+class SpeedModel_noVAE(nn.Module):
+    def __init__(self, input_size):
+        super().__init__()
+
+        stride = 2
+        kernel_size = 4
+        conv1_channels = 32
+        conv2_channels = 64
+        conv3_channels = 64
+        conv4_channels = 64
+        conv5_channels = 10
+        padding = 1
+        hidden = 1000
+
+        # Encoder
+        self.conv1 = nn.Sequential(
+            nn.Conv2d( in_channels=3, out_channels=conv1_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
+            nn.BatchNorm2d(conv1_channels),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        self.conv2 = nn.Sequential(
+            nn.Conv2d( in_channels=conv1_channels, out_channels=conv2_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
+            nn.BatchNorm2d(conv2_channels),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        self.conv3 = nn.Sequential(
+            nn.Conv2d( in_channels=conv2_channels, out_channels=conv3_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
+            nn.BatchNorm2d(conv3_channels),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        self.conv4 = nn.Sequential(
+            nn.Conv2d( in_channels=conv3_channels, out_channels=conv4_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
+            nn.BatchNorm2d(conv4_channels),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        self.conv5 = nn.Sequential(
+            nn.Conv2d( in_channels=conv4_channels, out_channels=conv5_channels, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(conv5_channels),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        conv_out = self.conv_layers(torch.rand(size=input_size))
+        self.conv_shape = conv_out.shape
+        self.flat_size = conv_out.flatten().shape[0]
+
+        self.fc = nn.Sequential(
+            nn.Linear(self.flat_size, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, 1)
+        )
+
+    def conv_layers(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        return x
+    
+    def encode(self, x):
+        x = self.conv_layers(x)
+        # Flatten and apply sigmoid
+        x = x.reshape(-1, self.flat_size)
+        x = self.fc(x)
+        return x
+
+    def forward(self, x, mode='train'):
+        self.train()
+        x = self.conv_layers(x)
+        x = x.reshape(-1, self.flat_size)
+        x = self.fc(x)
+        return x
+

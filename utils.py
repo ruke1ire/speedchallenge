@@ -86,6 +86,71 @@ class SpeedDojo(Dojo):
                 step += 1
             epoch += 1
 
+class SpeedDojo_noVAE(Dojo):
+    def obj_func(self, pred_vel, actual_vel):
+        """
+        Attributes:
+
+        pred_vel = Predicted velocity from SpeedModel
+        actual_vel = Actual velocity of the frame
+
+        Returns:
+
+        (
+            sup_loss
+        )
+
+        """
+        # SUPERVISED LOSS
+        sup_loss = F.mse_loss(pred_vel, actual_vel)
+
+        return sup_loss
+
+    def test(self, model, dataloader, logger, device):
+        pass
+
+    def train(self, model, train_dataloader, optimizer, device, criteria, logger, test_dataloader):
+        model = model.to(device)
+        step = 1
+        epoch = 1
+        vae_gain = 10.0
+        sup_gain  = 1.0
+
+        while True:
+            for i, (image_batch, label_batch) in enumerate(train_dataloader):
+
+                image_batch = image_batch.to(device)
+                label_batch = label_batch.float().to(device)
+
+                optimizer.zero_grad()
+
+                vel_pred = model(image_batch)
+
+                sup_loss = self.obj_func(vel_pred[1:], label_batch.unsqueeze(1)[1:])
+
+                sup_loss.backward()
+                optimizer.step()
+
+                logger.log_scalar(step, sup_loss.item(), "SUP train loss")
+
+                if i % 30 == 0:
+                    model.eval()
+
+                    image_batch_test, label_batch_test = iter(test_dataloader).next()
+                    image_batch_test = image_batch_test.to(device)
+                    label_batch_test = label_batch_test.float().to(device)
+
+                    with torch.no_grad():
+                        vel_pred_test = model(image_batch_test)
+                        sup_loss_test = self.obj_func(vel_pred_test[1:], label_batch_test.unsqueeze(1)[1:])
+
+                    logger.log_scalar(step, sup_loss_test.item(), "SUP test loss")
+
+                    model.train()
+                print(f"[EPOCH {epoch}][BATCH {i}][TRAIN LOSS {sup_loss.item():.4f}][TEST LOSS {sup_loss_test.item():.4f}]")
+                step += 1
+            epoch += 1
+
 if __name__ == "__main__":
     s = SpeedDojo()
 

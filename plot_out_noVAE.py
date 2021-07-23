@@ -1,7 +1,11 @@
 from utils import *
-from model.models import SpeedModel
+from model.models import SpeedModel_noVAE
 from dataset import SpeedDataset
- 
+
+import torch.multiprocessing
+
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 from torchvision.transforms.transforms import ToTensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import SequentialSampler, BatchSampler, Subset
@@ -14,18 +18,15 @@ val_size = int(0.2*len(speeddataset))
 test_dataset = Subset(speeddataset, list(range(0, val_size)))
 train_dataset = Subset(speeddataset, list(range(val_size, len(speeddataset))))
 
-batch_sampler = BatchSampler(SequentialSampler(train_dataset), batch_size = 2, drop_last = False)
-train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler, num_workers = 0)
+batch_sampler = BatchSampler(SequentialSampler(train_dataset), batch_size = 10, drop_last = False)
+train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler, num_workers = 8)
 
-batch_sampler_test = BatchSampler(SequentialSampler(test_dataset), batch_size = 2, drop_last = False)
-test_dataloader = DataLoader(test_dataset, batch_sampler=batch_sampler_test, num_workers = 0)
+batch_sampler_test = BatchSampler(SequentialSampler(test_dataset), batch_size = 10, drop_last = False)
+test_dataloader = DataLoader(test_dataset, batch_sampler=batch_sampler_test, num_workers = 8)
 
-device = 'cuda:1'
-latent_size = 1000
-vae_kwargs = {"latent_size": latent_size, "input_size": train_dataset[0][0].unsqueeze(0).shape}
-snail_kwargs = {"input_size": latent_size, "seq_length": 2}
-speedmodel = SpeedModel(snail_kwargs=snail_kwargs, vae_kwargs=vae_kwargs)
-speedmodel.load_state_dict(torch.load('pytorch_models/speedmodel.pt'))
+device = 'cuda:0'
+speedmodel = SpeedModel_noVAE(input_size=train_dataset[0][0].unsqueeze(0).shape)
+speedmodel.load_state_dict(torch.load('pytorch_models/speedmodel_noVAE.pt'))
 speedmodel = speedmodel.eval()
 speedmodel = speedmodel.to(device)
 
@@ -39,8 +40,8 @@ with torch.no_grad():
         image_batch = image_batch.to(device)
         label_batch = label_batch.float().to(device)
 
-        vel_pred, vae_out = speedmodel(image_batch)
-        vel_preds.append(vel_pred.cpu())
+        vel_pred = speedmodel(image_batch)
+        vel_preds.append(vel_pred.detach().cpu())
 #        if i == 40:
 #            break
 
@@ -51,7 +52,7 @@ fig = plt.figure()
 plt.plot(vel_preds, label="predicted")
 plt.plot(vel_actual, label="actual")
 plt.legend()
-plt.savefig("train_vel_pred_batch2.png")
+plt.savefig("train_vel_pred_noVAE.png")
 
 vel_actual = []
 vel_preds = []
@@ -63,7 +64,7 @@ with torch.no_grad():
         image_batch = image_batch.to(device)
         label_batch = label_batch.float().to(device)
 
-        vel_pred, vae_out = speedmodel(image_batch)
+        vel_pred = speedmodel(image_batch)
         vel_preds.append(vel_pred.cpu())
 
 vel_preds = torch.cat(vel_preds).squeeze(0)
@@ -75,4 +76,4 @@ fig = plt.figure()
 plt.plot(vel_preds, label="predicted")
 plt.plot(vel_actual, label="actual")
 plt.legend()
-plt.savefig("test_vel_pred_batch2.png")
+plt.savefig("test_vel_pred_noVAE.png")
